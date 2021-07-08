@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -e
+
+validate-yarn-dir() {
+  [[ -n ${1} && -d "${1}/.yarn" && -f "${1}/scripts/run-yarn.js" ]]
+}
+
+## Get path to self
+script_dir="$(readlink -f "$(dirname "${0}")/..")"
+
+## Get path to Yarn sources
+if ! validate-yarn-dir "${YARN_DIR}"; then
+  YARN_DIR="${script_dir}/../yarnpkg-berry"
+fi
+if ! validate-yarn-dir "${YARN_DIR}"; then
+  YARN_DIR="${script_dir}/../berry"
+fi
+if ! validate-yarn-dir "${YARN_DIR}"; then
+  echo "Path to valid yarn berry repository is required in YARN_DIR env var."
+  echo "Default paths are '../berry' and '../yarnpkg-berry'."
+  exit 2
+fi
+
+yarn_dir="$(readlink -f "${YARN_DIR}")"
+unset YARN_DIR
+export YARN_IGNORE_PATH="1"
+
+yarn() {
+  "${yarn_dir}/scripts/run-yarn.js" "${@}"
+}
+
+if [[ ${1} == "--build" ]]; then
+  shift 1
+
+  echo "=> Building Yarn"
+  pushd "${yarn_dir}"
+  yarn build:cli
+  popd
+
+  echo "=> Copying Yarn"
+  rm -f "${script_dir}/.yarn/releases/"*
+  cp "${yarn_dir}/packages/yarnpkg-cli/bundles/yarn.js" \
+    "${script_dir}/.yarn/releases/yarn.js"
+fi
+
+echo "=> Building DM linker plugin"
+pushd "${yarn_dir}"
+yarn build:plugin-dm
+popd
+
+echo "=> Copying DM linker plugin"
+cp "${yarn_dir}/packages/plugin-dm/bundles/@yarnpkg/plugin-dm.js" \
+  "${script_dir}/.yarn/plugins/@yarnpkg/plugin-dm.js"
+
+echo "=> Running yarn"
+cd "${script_dir}"
+yarn "${@}"

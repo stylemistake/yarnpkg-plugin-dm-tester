@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "name": "root",
+  "version": "1.0.0",
+  "languageName": "dm",
+  "workspaces": [
+    "packages/*"
+  ],
+  "dependencies": {
+    "external-pkg": "file:external-pkg.tgz"
+  },
+  "packageManager": "yarn@2.4.2"
+}
